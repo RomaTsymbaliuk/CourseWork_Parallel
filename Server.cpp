@@ -15,7 +15,8 @@
 #include <dirent.h>
 #include <algorithm>
 #define PORT 8080
-#define THREADS_NUMBER 25
+#define THREADS_NUMBER 7
+
 std::vector<std::string> ignorlist{".", ",","!","@","#","$","%","&","*","(",")", "_","+","=","?","`","~", "|","/", ":", ";", "<", ">", "{", "}"};
 std::vector<std::string> ignorWords{"br", "</br>", "<h>", "</h>"};
 
@@ -25,7 +26,9 @@ class safeMap{
 private:
     
     std::map<std::string, std::unique_ptr<std::mutex> > mutexMap;
-    std::mutex gMutex;
+    std::mutex insertMutex;
+    std::mutex fileAddMutex;
+
 
 public:
 
@@ -36,81 +39,58 @@ public:
 };
 
 
+
+
 void safeMap::insert(std::string key, std::vector<std::string> item){
 
-std::mutex * inner_mutex;
 
     {
 
-        std::lock_guard<std::mutex> g_lk(gMutex);
+        std::lock_guard<std::mutex> g_lk(insertMutex);
         mainMap.insert({key, item});
+        mutexMap.insert({key, std::make_unique<std::mutex>()});
 
     }
 
 }
 
+
+
 int safeMap::findVector(std::string key, std::string file){
 
-    std::map<std::string, std::vector<std::string>>::iterator it;
+    std::mutex* inner_mutex;
     int flag = 0;
-    if (mainMap.find(key) == mainMap.end()){
 
-        flag = 0;
-    }
-    else{
+    std::map<std::string, std::vector<std::string>>::iterator it;
 
-        flag = 1;
-    }
 
-    if (flag){
+    {
+        std::lock_guard<std::mutex> g_lk(fileAddMutex);
 
-        std::mutex * inner_mutex;
-
-        {
-
-            std::lock_guard<std::mutex> g_lk(gMutex);
-
-            auto it = mutexMap.find(key);
-
-            if (it == mutexMap.end())
-            {
-                it = mutexMap.emplace(key, std::make_unique<std::mutex>()).first;
-            }
-
-            inner_mutex = it->second.get();
-
+        auto it = mutexMap.find(key);
+        if (it == mutexMap.end()){
+            it = mutexMap.emplace(key, std::make_unique<std::mutex>()).first;
         }
 
-        {
-
-            std::lock_guard<std::mutex> c_lk(*inner_mutex);
-
-            int exists = 0;
-
-            for (std::vector<std::string>::iterator it = (mainMap[key]).begin(); it!= (mainMap[key]).end(); ++it){
-
-                if ((*it) == file){
-                    exists = 1;
-                    break;
-                }
-
-            }
-
-            if (!exists){
-
-                (mainMap[key]).push_back(file);
-            }
-
-        }
-        
+        inner_mutex = it->second.get();
     }
 
+    {
+        std::lock_guard<std::mutex> c_lk(*inner_mutex);
+        (mainMap[key]).push_back(file);
+    }
+
+    
     return flag;
 
 }
 
+safeMap table;
+std::mutex mtx;
+
 std::vector<std::string> getFiles(char* path, std::string startIndex, std::string endIndex){
 
+    std::vector<std::string> filesNeeded; 
     
     DIR *dir;
     struct dirent *ent;
@@ -122,15 +102,16 @@ std::vector<std::string> getFiles(char* path, std::string startIndex, std::strin
 
     n = scandir(path, &namelist, 0, versionsort);
 
-    std::vector<std::string> filesNeeded; 
+    
     if (n < 0)
         perror("scandir");
     else
     {
-        for(i = 0 ; i < n; ++i)
+        for(i = 0 ; i < 2000; ++i)
         {
             std::string filename(namelist[i]->d_name);
 
+            /*
             if (filename.find(startIndex) != std::string::npos) {
 
                 flagStart = 1;
@@ -146,26 +127,33 @@ std::vector<std::string> getFiles(char* path, std::string startIndex, std::strin
                 filesNeeded.push_back(filename);
                 fileCounter++;
             }
-
+            
             free(namelist[i]);
-        
+            */
+
+            filesNeeded.push_back(filename);
         }
         free(namelist);
     }
     
 
+/*
+    for (int i = 0; i < 2000; i++){
+
+
+
+    }
+*/
     return filesNeeded;
 
 }
 
-safeMap table;
 
-std::mutex mtx;
+
+
 
 void buildIndex(std::vector<std::string> temp,  char* path){
 
-
-    
 
     for (std::vector<std::string>::iterator ik=temp.begin(); ik != temp.end(); ++ik){
 
@@ -216,9 +204,9 @@ void buildIndex(std::vector<std::string> temp,  char* path){
 
                 }
                 
-                int status = table.findVector(word, f);
+                
 
-                if ( status == 0 ) {
+                if ( table.mainMap.find(word) == table.mainMap.end()) {
 
                     std::vector<std::string> key;
                   
@@ -227,6 +215,11 @@ void buildIndex(std::vector<std::string> temp,  char* path){
                     table.insert(word, key);
                     
                 } 
+
+                else{
+
+                    table.findVector(word, f);
+                }
 
                 if (file.eof()){
 
@@ -257,6 +250,8 @@ int main(int argc, char const *argv[])
 
     v = getFiles(path, startIndex, endIndex);
 
+    
+
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -271,8 +266,6 @@ int main(int argc, char const *argv[])
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     for (int i = 0; i < THREADS_NUMBER; i++){
-
-
 
         std::vector<std::string> temp;
         int start = (v.size() / THREADS_NUMBER ) * i;
@@ -293,7 +286,7 @@ int main(int argc, char const *argv[])
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-    std::cout<<"Index built in "<<std::chrono::duration_cast<std::chrono::seconds>(end - begin).count()<<" seconds "<<std::endl;
+    std::cout<<"Index built in "<<std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()<<" milliseconds "<<std::endl;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
@@ -346,5 +339,6 @@ int main(int argc, char const *argv[])
 
     std::cout<<std::endl;
     
+
     return 0;
 }
