@@ -15,7 +15,7 @@
 #include <dirent.h>
 #include <algorithm>
 #define PORT 8080
-#define THREADS_NUMBER 2
+#define THREADS_NUMBER 25
 //std::unordered_map<std::string, std::vector<std::string>> table;
 std::vector<std::string> ignorlist{".", ",","!","@","#","$","%","&","*","(",")", "_","+","=","?","`","~", "|","/", ":", ";", "<", ">", "{", "}"};
 std::vector<std::string> ignorWords{"br", "</br>", "<h>", "</h>"};
@@ -31,6 +31,7 @@ public:
     std::map<std::string, std::vector<std::string>> mainMap;
 //    std::vector<std::string> get(std::string key);
     void insert(std::string key, std::vector<std::string> item);
+    int findVector(std::string key, std::string file);
 
 //    template< class K > iterator find( const K& x );
 };
@@ -93,6 +94,74 @@ std::mutex * inner_mutex;
 
 }
 
+int safeMap::findVector(std::string key, std::string file){
+
+    std::map<std::string, std::vector<std::string>>::iterator it;
+    int flag = 0;
+//    for (it = mainMap.begin(); it != mainMap.end(); it++)
+//    {
+
+//        if (it->first == key){
+//            flag = 1;
+//            break;
+//        }
+//    }
+
+    if (mainMap.find(key) == mainMap.end()){
+
+        flag = 0;
+    }
+    else{
+
+        flag = 1;
+    }
+
+    if (flag){
+
+        std::mutex * inner_mutex;
+
+        {
+
+            std::lock_guard<std::mutex> g_lk(gMutex);
+
+            auto it = mutexMap.find(key);
+
+            if (it == mutexMap.end())
+            {
+                it = mutexMap.emplace(key, std::make_unique<std::mutex>()).first;
+            }
+
+            inner_mutex = it->second.get();
+
+        }
+
+        {
+
+            std::lock_guard<std::mutex> c_lk(*inner_mutex);
+
+            int exists = 0;
+
+            for (std::vector<std::string>::iterator it = (mainMap[key]).begin(); it!= (mainMap[key]).end(); ++it){
+
+                if ((*it) == file){
+                    exists = 1;
+                    break;
+                }
+
+            }
+
+            if (!exists){
+
+                (mainMap[key]).push_back(file);
+            }
+
+        }
+        
+    }
+
+    return flag;
+
+}
 
 
 
@@ -204,48 +273,18 @@ void buildIndex(std::vector<std::string> temp,  char* path){
 
                 }
                 
-//                std::mutex mtx;
+                int status = table.findVector(word, f);
 
-                if ( table.mainMap.find(word) == table.mainMap.end() ) {
+                if ( status == 0 ) {
 
-                std::vector<std::string> key;
-
- //               {
-
-//                    std::lock_guard<std::mutex> guard(mtx);                  
+                    std::vector<std::string> key;
+                  
                     key.push_back(f);
-//                }
-                    std::thread::id this_id = std::this_thread::get_id();
-                    
-//                    std::cout<<"Word : "<<word<<"  found  "<<" by thread : "<<this_id<<std::endl;
-                    
+                        
                     table.insert(word, key);
                     
-
                 } 
 
-                else {
-
-                  int exists = 0;
-
-//                  std::lock_guard<std::mutex> guard(mtx);
-                    
-
-                  for (std::vector<std::string>::iterator it = (table.mainMap.find(word)->second).begin(); it!= (table.mainMap.find(word)->second).end(); ++it){
-                       if ((*it) == f){
-                          exists = 1;
-                          break;
-                      }
-                    }
-
-                   if (!exists){
-
-                        (table.mainMap.find(word)->second).push_back(f);
-                        
-                   }
-
-                }
-                
                 if (file.eof()){
 
                     file.close();
