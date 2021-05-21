@@ -17,25 +17,38 @@
 #include "build.h"
 
 #define PORT 8080
-#define THREADS_NUMBER 7
+#define THREADS_NUMBER 10
 
 safeMap table;
-std::mutex mtx;
 
 std::vector<std::string> ignorlist{".", ",","!","@","#","$","%","&","*","(",")", "_","+","=","?","`","~", "|","/", ":", ";", "<", ">", "{", "}"};
 std::vector<std::string> ignorWords{"br", "</br>", "<h>", "</h>"};
 
 int main(int argc, char const *argv[])
 {
-    char* path = "../aclImdb_v1/aclImdb/train/neg";
-
-    std::string startIndex = "6000"; //7750
+    char* trainNegPath = "./aclImdb/train/neg";
+    char* trainPosPath = "./aclImdb/train/pos";
+    char* testNegPath = "./aclImdb/test/neg";
+    char* testPosPath = "./aclImdb/test/pos";
+    char* trainUnsupPath = "./aclImdb/train/unsup";
+    std::string startIndex = "7750"; //7750
     std::string endIndex = "8000";
+
+    std::string unsupStartIndex = "31000";
+    std::string unsupEndIndex = "32000";
+
     std::vector<std::string> v;
     std::vector<std::thread> threads;
 
-    v = getFiles(path, startIndex, endIndex);
+    v = getFiles(trainNegPath, startIndex, endIndex, v);
 
+    v = getFiles(trainPosPath, startIndex, endIndex, v);
+
+    v = getFiles(testNegPath, startIndex, endIndex, v);
+
+    v = getFiles(testPosPath, startIndex, endIndex, v);
+
+    v = getFiles(trainUnsupPath, unsupStartIndex, unsupEndIndex, v);
     
 
     int server_fd, new_socket, valread;
@@ -48,7 +61,18 @@ int main(int argc, char const *argv[])
     ignorlist.push_back(s);
     
     int i = 0;
+    
+
+
+
+ //   for (std::vector<std::string>::iterator it = v.begin(); it!= v.end(); ++it){
+ //       std::cout<<(*it)<<std::endl;
+ //   }
+
     std::cout<<"v size "<<v.size()<<std::endl;
+
+
+    
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     for (int i = 0; i < THREADS_NUMBER; i++){
@@ -61,7 +85,7 @@ int main(int argc, char const *argv[])
             temp.push_back(v[k]);
         }
 
-        threads.push_back(std::thread(buildIndex, temp, path));
+        threads.push_back(std::thread(buildIndex, temp));
 
         temp.clear();
 
@@ -119,7 +143,7 @@ int main(int argc, char const *argv[])
 
     for (std::vector<std::string>::iterator ig = (found->second).begin(); ig!=(found->second).end(); ++ig){
 
-        std::cout<<(*ig)<<"  ";
+        std::cout<<(*ig)<<"  "<<std::endl;
 
     }
 
