@@ -16,53 +16,25 @@
 #include <algorithm>
 #define PORT 8080
 #define THREADS_NUMBER 25
-//std::unordered_map<std::string, std::vector<std::string>> table;
 std::vector<std::string> ignorlist{".", ",","!","@","#","$","%","&","*","(",")", "_","+","=","?","`","~", "|","/", ":", ";", "<", ">", "{", "}"};
 std::vector<std::string> ignorWords{"br", "</br>", "<h>", "</h>"};
 
 
 class safeMap{
+
 private:
     
     std::map<std::string, std::unique_ptr<std::mutex> > mutexMap;
     std::mutex gMutex;
 
 public:
+
     std::map<std::string, std::vector<std::string>> mainMap;
-//    std::vector<std::string> get(std::string key);
     void insert(std::string key, std::vector<std::string> item);
     int findVector(std::string key, std::string file);
 
-//    template< class K > iterator find( const K& x );
 };
-/*
-std::vector<std::string> safeMap::get(std::string key)
-{
-    std::mutex * inner_mutex;
 
-    {
-
-        std::lock_guard<std::mutex> g_lk(gMutex);
-
-        auto it = mutexMap.find(key);
-
-        if (it == mutexMap.end())
-        {
-            it = mutexMap.emplace(key, std::make_unique<std::mutex>()).first;
-        }
-
-        inner_mutex = it->second.get();
-
-    }
-
-    {
-
-        std::lock_guard<std::mutex> c_lk(*inner_mutex);
-        return mainMap[key];
-
-    }
-}
-*/
 
 void safeMap::insert(std::string key, std::vector<std::string> item){
 
@@ -71,26 +43,9 @@ std::mutex * inner_mutex;
     {
 
         std::lock_guard<std::mutex> g_lk(gMutex);
-
-        auto it = mutexMap.find(key);
-
-        if (it == mutexMap.end())
-        {
-            it = mutexMap.emplace(key, std::make_unique<std::mutex>()).first;
-        }
-
-        inner_mutex = it->second.get();
-
-    }
-
-    {
-
-        std::lock_guard<std::mutex> c_lk(*inner_mutex);
         mainMap.insert({key, item});
 
     }
-
-
 
 }
 
@@ -98,15 +53,6 @@ int safeMap::findVector(std::string key, std::string file){
 
     std::map<std::string, std::vector<std::string>>::iterator it;
     int flag = 0;
-//    for (it = mainMap.begin(); it != mainMap.end(); it++)
-//    {
-
-//        if (it->first == key){
-//            flag = 1;
-//            break;
-//        }
-//    }
-
     if (mainMap.find(key) == mainMap.end()){
 
         flag = 0;
@@ -162,9 +108,6 @@ int safeMap::findVector(std::string key, std::string file){
     return flag;
 
 }
-
-
-
 
 std::vector<std::string> getFiles(char* path, std::string startIndex, std::string endIndex){
 
@@ -291,16 +234,16 @@ void buildIndex(std::vector<std::string> temp,  char* path){
                     break;
 
 
-                    }
-
                 }
-            }
 
+            }
         }
+
+    }
 
 
    
-    }
+}
 
 
 int main(int argc, char const *argv[])
@@ -348,9 +291,9 @@ int main(int argc, char const *argv[])
 
     for (auto& th : threads) th.join();
 
-std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-std::cout<<"Index built in "<<std::chrono::duration_cast<std::chrono::seconds>(end - begin).count()<<" seconds "<<std::endl;
+    std::cout<<"Index built in "<<std::chrono::duration_cast<std::chrono::seconds>(end - begin).count()<<" seconds "<<std::endl;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
