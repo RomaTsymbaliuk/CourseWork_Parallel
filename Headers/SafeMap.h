@@ -1,4 +1,7 @@
-
+#include <mutex>
+#include <string>
+#include <map>
+#include <algorithm>
 class safeMap{
 
 private:
@@ -55,7 +58,9 @@ int safeMap::findVector(std::string key, std::string file){
 
     {
         std::lock_guard<std::mutex> c_lk(*inner_mutex);
+
         (mainMap[key]).push_back(file);
+
     }
 
     
