@@ -18,12 +18,48 @@
 #include "build.h"
 
 #define PORT 8080
-#define THREADS_NUMBER 4
+#define THREADS_NUMBER 10
 
 safeMap table;
 
 std::vector<std::string> ignorlist{".", ",","!","@","#","$","%","&","*","(",")", "_","+","=","?","`","~", "|","/", ":", ";", "<", ">", "{", "}"};
 std::vector<std::string> ignorWords{"br", "</br>", "<h>", "</h>"};
+
+void clientListener(int new_socket){
+
+
+    char buffer[1024] = {0};
+
+    int valread = read(new_socket, buffer, 1024);
+
+    std::string input(buffer);
+
+    auto found = table.mainMap.find(input);
+
+    std::cout<<input<<std::endl;
+    
+    std::vector<std::string>::iterator it;
+
+    it = std::unique ((found->second).begin(), (found->second).end());
+
+    (found->second).resize( std::distance((found->second).begin(),it) );
+
+    for (std::vector<std::string>::iterator ik = (found->second).begin(); ik!=(found->second).end(); ++ik){
+
+        char buf[1024] = {0};
+
+        int len = (*ik).length();
+
+        strcpy(buf, (*ik).c_str());
+
+        send(new_socket, &len, sizeof(int), 0);
+
+        send(new_socket, buf, strlen(buf), 0);
+
+    }
+
+    
+}
 
 int main(int argc, char const *argv[])
 {
@@ -124,48 +160,14 @@ int main(int argc, char const *argv[])
     
     while(1){
 
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
-                       (socklen_t*)&addrlen))<0)
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
         {
             perror("accept");
             exit(EXIT_FAILURE);
         }
 
-
-        char buffer[1024] = {0};
-
-        valread = read(new_socket, buffer, 1024);
-
-        std::string input(buffer);
-
-        auto found = table.mainMap.find(input);
-
-        std::cout<<input<<std::endl;
-
-
-        
-        std::vector<std::string>::iterator it;
-
-        it = std::unique ((found->second).begin(), (found->second).end());
-
-        (found->second).resize( std::distance((found->second).begin(),it) );
-
-        for (std::vector<std::string>::iterator ik = (found->second).begin(); ik!=(found->second).end(); ++ik){
-
-    //        std::cout<<(*ik)<<std::endl;
-
-            char buf[1024] = {0};
-
-
-            int len = (*ik).length();
-
-            strcpy(buf, (*ik).c_str());
-
-            send(new_socket, &len, sizeof(int), 0);
-
-            send(new_socket, buf, strlen(buf), 0);
-
-        }
+        std::thread th(clientListener, new_socket);
+        th.detach();
 
     
     }
