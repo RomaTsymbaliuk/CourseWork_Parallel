@@ -1,65 +1,25 @@
 #include <iostream>
-#include <algorithm>
-#include <chrono>
 #include <vector>
+#include <chrono>
 #include <map>
-#include <unordered_map>
-#include <mutex>
 #include <thread>
-#include <fstream>
 #include <unistd.h>
-#include <stdio.h>
 #include <sys/socket.h>
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <dirent.h>
-#include "safeMap.h"
-#include "build.h"
-
+#include "SafeMap.h"
+#include "Build.h"
+#include "ClientHandler.h"
 #define PORT 8080
-#define THREADS_NUMBER 10
+#define THREADS_NUMBER 4
 
 safeMap table;
 
 std::vector<std::string> ignorlist{".", ",","!","@","#","$","%","&","*","(",")", "_","+","=","?","`","~", "|","/", ":", ";", "<", ">", "{", "}"};
 std::vector<std::string> ignorWords{"br", "</br>", "<h>", "</h>"};
 
-void clientListener(int new_socket){
 
-
-    char buffer[1024] = {0};
-
-    int valread = read(new_socket, buffer, 1024);
-
-    std::string input(buffer);
-
-    auto found = table.mainMap.find(input);
-
-    std::cout<<input<<std::endl;
-    
-    std::vector<std::string>::iterator it;
-
-    it = std::unique ((found->second).begin(), (found->second).end());
-
-    (found->second).resize( std::distance((found->second).begin(),it) );
-
-    for (std::vector<std::string>::iterator ik = (found->second).begin(); ik!=(found->second).end(); ++ik){
-
-        char buf[1024] = {0};
-
-        int len = (*ik).length();
-
-        strcpy(buf, (*ik).c_str());
-
-        send(new_socket, &len, sizeof(int), 0);
-
-        send(new_socket, buf, strlen(buf), 0);
-
-    }
-
-    
-}
 
 int main(int argc, char const *argv[])
 {

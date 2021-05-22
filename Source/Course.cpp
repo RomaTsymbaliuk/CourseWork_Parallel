@@ -59,8 +59,6 @@ int main(){
             std::cout<<buff<<std::endl;
 
         }
-
-
     }
 
     return 0;
