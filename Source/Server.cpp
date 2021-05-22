@@ -1,7 +1,9 @@
 #include <iostream>
+#include <algorithm>
 #include <chrono>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <mutex>
 #include <thread>
 #include <fstream>
@@ -12,12 +14,11 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <dirent.h>
-#include <algorithm>
 #include "safeMap.h"
 #include "build.h"
 
 #define PORT 8080
-#define THREADS_NUMBER 10
+#define THREADS_NUMBER 4
 
 safeMap table;
 
@@ -63,13 +64,7 @@ int main(int argc, char const *argv[])
     int i = 0;
     
 
-
-
- //   for (std::vector<std::string>::iterator it = v.begin(); it!= v.end(); ++it){
- //       std::cout<<(*it)<<std::endl;
- //   }
-
-    std::cout<<"v size "<<v.size()<<std::endl;
+    std::cout<<"Number of files indexed : "<<v.size()<<std::endl;
 
 
     
@@ -126,29 +121,54 @@ int main(int argc, char const *argv[])
         perror("listen");
         exit(EXIT_FAILURE);
     }
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
-                       (socklen_t*)&addrlen))<0)
-    {
-        perror("accept");
-        exit(EXIT_FAILURE);
-    }
-
-    char buffer[1024] = {0};
-    valread = read(new_socket, buffer, 1024);
-
-    std::string input(buffer);
-    auto found = table.mainMap.find(input);
-
-    std::cout<<input<<std::endl;
-
-    for (std::vector<std::string>::iterator ig = (found->second).begin(); ig!=(found->second).end(); ++ig){
-
-        std::cout<<(*ig)<<"  "<<std::endl;
-
-    }
-
-    std::cout<<std::endl;
     
+    while(1){
+
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, 
+                       (socklen_t*)&addrlen))<0)
+        {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+
+
+        char buffer[1024] = {0};
+
+        valread = read(new_socket, buffer, 1024);
+
+        std::string input(buffer);
+
+        auto found = table.mainMap.find(input);
+
+        std::cout<<input<<std::endl;
+
+
+        
+        std::vector<std::string>::iterator it;
+
+        it = std::unique ((found->second).begin(), (found->second).end());
+
+        (found->second).resize( std::distance((found->second).begin(),it) );
+
+        for (std::vector<std::string>::iterator ik = (found->second).begin(); ik!=(found->second).end(); ++ik){
+
+    //        std::cout<<(*ik)<<std::endl;
+
+            char buf[1024] = {0};
+
+
+            int len = (*ik).length();
+
+            strcpy(buf, (*ik).c_str());
+
+            send(new_socket, &len, sizeof(int), 0);
+
+            send(new_socket, buf, strlen(buf), 0);
+
+        }
+
+    
+    }
 
     return 0;
 }

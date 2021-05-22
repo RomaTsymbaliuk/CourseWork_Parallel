@@ -43,6 +43,26 @@ int main(){
 	strcpy(buff, word.c_str());
 	send(sock, buff, strlen(buff), 0);
 
+
+    while(1){
+
+        char buff[1024] = {0};
+
+        int len = 0;
+
+        valread = read(sock, &len, sizeof(int));
+
+        valread = read(sock, buff, len*sizeof(char));
+
+        if (buff[0]!=0){
+
+            std::cout<<buff<<std::endl;
+
+        }
+
+
+    }
+
     return 0;
 
 
