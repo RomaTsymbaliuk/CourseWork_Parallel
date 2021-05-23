@@ -37,8 +37,8 @@ int main(){
     }
 	
 	std::string word;
-	std::cin >>word;
-
+//	std::cin >>word;
+    getline(std::cin, word);
 	char buff[1024];
 	strcpy(buff, word.c_str());
 	send(sock, buff, strlen(buff), 0);
