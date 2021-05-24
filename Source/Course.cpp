@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <iostream>
+#include <algorithm>
 #include <stdio.h>
 #include <vector>
 #include <stdlib.h>
@@ -39,6 +40,11 @@ int main(){
 	std::string word;
 //	std::cin >>word;
     getline(std::cin, word);
+
+    std::for_each(word.begin(), word.end(), [](char & c){
+                    c = ::tolower(c);
+                });
+
 	char buff[1024];
 	strcpy(buff, word.c_str());
 	send(sock, buff, strlen(buff), 0);

@@ -37,7 +37,7 @@ void removeDupWord(std::string str, int new_socket)
 
     }
     
-    std::cout<<"_____________________________________________________________________________"<<std::endl;
+    std::cout<<"_____________________________________________________________________________________________"<<std::endl;
 
     
 
@@ -77,6 +77,7 @@ void removeDupWord(std::string str, int new_socket)
     else{
 
         std::vector<std::string> reply = results[0];
+        
         for (std::vector<std::string>::iterator ik = reply.begin(); ik!=reply.end(); ++ik){
 
             char buf[1024] = {0};

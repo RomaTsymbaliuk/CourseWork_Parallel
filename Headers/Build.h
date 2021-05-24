@@ -32,6 +32,10 @@ void buildIndex(std::vector<std::string> temp){
 
                 file >> word;
 
+                std::for_each(word.begin(), word.end(), [](char & c){
+                    c = ::tolower(c);
+                });
+
                 for (std::vector<std::string>::iterator it = ignorWords.begin(); it!=ignorWords.end(); ++it){
 
 
